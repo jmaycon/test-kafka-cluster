@@ -1,25 +1,77 @@
 # test-kafka-cluster
 
 ## Table of Contents
-- [To start the application](#to-start-the-application)
-- [Application](#application)
-- [Access Kafka UI](#access-kafka-ui)
+- [Overview](#overview)
+- [Components](#components)
+    - [Kafka Cluster](#kafka-cluster)
+    - [Monitoring Tools](#monitoring-tools)
+    - [Application Testing](#application-testing)
+- [Use Cases](#use-cases)
+- [How to Use](#how-to-use)
+- [Starting the Application](#starting-the-application)
+- [Application Swagger UI](#application-swagger-ui)
+- [Kafka UI](#kafka-ui)
 - [Monitoring](#monitoring)
     - [Prometheus](#prometheus)
     - [Alert Manager](#alert-manager)
 - [Toxiproxy](#toxiproxy)
     - [List Proxies](#list-proxies)
-    - [List specific proxy](#list-specific-proxy)
+    - [List Specific Proxy](#list-specific-proxy)
     - [Adding Toxics](#adding-toxics)
-        - [Add a latency of 2 minutes to node 1](#add-a-latency-of-2-minutes-to-node-1)        
-        - [Simulate bring a service down](#simulate-bring-a-service-down)        
+        - [Simulate Latency](#simulate-latency)
+        - [Simulate Kafka Node Unreachable](#simulate-kafka-node-unreachable-by-the-client)
+    - [Removing Toxics](#removing-toxics)
 - [Kafka CLI](#kafka-cli)
     - [Install Kafka CLI](#install-kafka-cli)
     - [Describe Topics](#describe-topics)
     - [Describe Consumer Group](#describe-consumer-group)
-    - [Reading Kafka saved data](#reading-kafka-saved-data)
+    - [Reading Kafka Saved Data](#reading-kafka-saved-data)
+- [References](#references)
 
-## To start the application
+## Overview
+
+The `test-kafka-cluster` project is a development and testing environment for Apache Kafka, designed to simulate and analyze the behavior of Kafka clusters in various conditions. It uses Docker to set up a multi-node Kafka cluster, along with associated tools for monitoring, management, and testing.
+
+## Components
+
+### Kafka Cluster
+
+- **Kafka Nodes**: Three Kafka broker nodes (`kafka-node-1`, `kafka-node-2`, and `kafka-node-3`) are set up in a Docker environment. These nodes are configured for replication and high availability.
+- **Toxiproxy**: A tool for simulating network and system failures by introducing faults like latency or disconnections into the Kafka brokers. This helps in testing the resilience and fault tolerance of Kafka applications.
+- **Kafka UI**: Provides a web interface for managing and monitoring Kafka topics and consumer groups.
+
+### Monitoring Tools
+
+- **Prometheus**: A monitoring and alerting toolkit used to collect metrics from Kafka and other services. It provides a web interface for querying and visualizing these metrics.
+- **Alertmanager**: Handles alerts sent by Prometheus, allowing for notification through various channels if certain conditions are met.
+
+### Application Testing
+
+- **test-app**: A sample application built to interact with the Kafka cluster. It can be used to produce and consume messages, allowing developers to test Kafka's functionality and performance under different conditions.
+
+## Use Cases
+
+1. **Development and Testing**:
+    - Provides a local environment for developers to test Kafka-related applications and configurations.
+    - Simulates different failure scenarios using Toxiproxy to ensure that Kafka applications can handle various network issues and outages.
+
+2. **Monitoring and Troubleshooting**:
+    - Offers insights into the health and performance of Kafka brokers through Prometheus metrics.
+    - Allows for real-time monitoring and alerting to quickly address issues or bottlenecks in the Kafka cluster.
+
+3. **Educational Purposes**:
+    - Serves as a learning tool for understanding Kafka’s architecture, configuration, and operations.
+    - Demonstrates how to set up and manage a Kafka cluster in a controlled environment.
+
+## How to Use
+
+1. **Start the Environment**: Use the provided `docker compose` commands to set up and start the Kafka cluster and associated tools.
+2. **Interact with Kafka**: Use Kafka CLI tools and the Kafka UI to manage topics, consumer groups, and examine the cluster's state.
+3. **Simulate Failures**: Leverage Toxiproxy to test how your Kafka applications respond to simulated network failures or latency.
+4. **Monitor and Alert**: Use Prometheus and Alertmanager to track metrics and get notified of any issues within the Kafka cluster.
+
+
+## Starting the application
 
 ```shell
 mvn clean verify && \
@@ -28,11 +80,11 @@ mvn clean verify && \
   docker compose -p kafka-cluster up -d
 ```
 
-## Application
+## Application Swagger UI
 
 - [Swagger UI](http://localhost:8080/swagger-ui/index.html)
 
-## Access Kafka UI
+## Kafka UI
 
 - [Kafka UI](http://localhost:28080)
 
@@ -62,7 +114,7 @@ curl localhost:8474/proxies/kafka-node-1
 
 ### Adding Toxics
 
-#### Add a latency of 2 minutes to node 1
+#### Simulate latency
 
 - Adding
 
@@ -86,7 +138,7 @@ curl -X POST http://localhost:8474/proxies/$KAFKA_NODE/toxics \
 curl -X DELETE http://localhost:8474/proxies/$KAFKA_NODE/toxics/latency-toxic-upstream
 ```
 
-#### Simulate bring a service down
+#### Simulate Kafka node unreachable by the client
 
 This will only disable the proxy, and simulate the service down. This is done by POSTing to `/proxies/{proxy}` and setting the `enabled` field to `false`.
 
@@ -188,3 +240,8 @@ baseOffset: 0 lastOffset: 0 count: 1 baseSequence: 0 lastSequence: 0 producerId:
 baseOffset: 1 lastOffset: 1 count: 1 baseSequence: 0 lastSequence: 0 producerId: 4000 producerEpoch: 0 partitionLeaderEpoch: 10 isTransactional: false isControl: false deleteHorizonMs: OptionalLong.empty position: 77 CreateTime: 1725670160137 size: 77 magic: 2 compresscodec: none crc: 3335080710 isvalid: true
 | offset: 1 CreateTime: 1725670160137 keySize: 1 valueSize: 8 sequence: 0 headerKeys: [] key: 0 payload: "string"
 ```
+
+## References
+
+- [Shopify/toxiproxy](https://github.com/Shopify/toxiproxy?tab=readme-ov-file#down)
+- [Apache Kafka](https://kafka.apache.org/downloads)
