@@ -1,0 +1,22 @@
+management.endpoints.web.exposure.include: "*"
+management.endpoint.health.show.details: always
+
+
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:-localhost:19092,localhost:29092,localhost:39092}
+    consumer:
+      group-id: ${CONSUMER_GROUP_ID:-group-a}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # Set poll and fetch intervals
+      properties:
+        fetch.min.bytes: 50000       # Minimum amount of data in bytes to be fetched
+        fetch.max.wait.ms: 10000      # Wait up to 5 seconds (5000ms) if data is less than fetch-min-bytes
+        max.poll.interval.ms: 30000   # Maximum time between polls (5 seconds)
+        max.poll.records: 100        # Number of records to fetch per poll
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer

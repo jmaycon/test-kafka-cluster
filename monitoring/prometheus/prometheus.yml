@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 5s  # Set the scrape interval to every 15 seconds.
+  evaluation_interval: 15s  # Evaluate rules every 15 seconds.
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'  # Ensure Alertmanager service is configured and reachable at this address.
+
+rule_files:
+  - "kafka-alerts.yml"  # Include the alert rules file.
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["host.docker.internal:9090"]
+
+  - job_name: 'test-app'
+    static_configs:
+      - targets: [ 'test-app:8080' ] # For localhost use ['host.docker.internal:8080']
+    metrics_path: '/actuator/prometheus'

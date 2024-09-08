@@ -1,0 +1,39 @@
+groups:
+  - name: KafkaAlerts
+    rules:
+      - alert: KafkaUIDown
+        expr: up{job="kafka-ui"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka UI is down"
+          description: "The Kafka UI at {{ $labels.instance }} is down."
+
+      - alert: KafkaDown
+        expr: up{job="kafka-node-1"} == 0 or up{job="kafka-node-2"} == 0 or up{job="kafka-node-3"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka broker is down"
+          description: "One or more Kafka brokers are down."
+
+      - alert: KafkaConsumerNotFetchingRecords
+        expr: increase(kafka_consumer_fetch_manager_fetch_total[20s]) == 0
+          and kafka_consumer_coordinator_assigned_partitions != 0
+        for: 20s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Consumer {{ $labels.client_id }} not fetching records"
+          description: |
+            Consumer **{{ $labels.client_id }}** from application **{{ $labels.job }}** has not been able to complete any fetch of records in the last 20 seconds.
+
+            This alert is only triggered if the consumer has assigned partitions (i.e., `kafka_consumer_coordinator_assigned_partitions` is not zero).
+
+            Possible causes:
+            - Check the consumer property `fetch.max.wait.ms` to ensure it is set properly.
+            - Investigate potential network connectivity issues between the consumer and the Kafka broker.
+
+            If the issue persists, review logs on both the consumer and broker for detailed troubleshooting.

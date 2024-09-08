@@ -1,0 +1,175 @@
+services:
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy
+    container_name: toxiproxy
+    init: true
+    ports:
+      # This is the toxiproxy API port
+      - '8474:8474'
+      # Kafka Ports ports see toxiproxy-config.json
+      - "30001:30001"
+      - "30002:30002"
+      - "30003:30003"
+    volumes:
+      - ./toxiproxy-config.json:/etc/toxiproxy/config.json
+    command: ["-host", "0.0.0.0", "--config", "/etc/toxiproxy/config.json" ]
+    networks:
+      - kafka-net
+    healthcheck:
+      test: [ 'CMD', '/toxiproxy-cli', 'l' ]
+      interval: 15s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+
+  kafka-node-1:
+    image: apache/kafka:3.7.0
+    container_name: kafka-node-1
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: INTERNAL://kafka-node-1:9092,EXTERNAL://0.0.0.0:19092,CONTROLLER://kafka-node-1:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://toxiproxy:30001,EXTERNAL://localhost:19092
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-node-1:9093,2@kafka-node-2:9093,3@kafka-node-3:9093
+      KAFKA_KRAFT_MODE: 'true'
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+    ports:
+      - "19092:19092"
+    volumes:
+      - ./.kafka-docker-volume/kafka-node-1:/var/lib/kafka/data
+    networks:
+      - kafka-net
+    healthcheck:
+      test: ['CMD', '/opt/kafka/bin/kafka-broker-api-versions.sh', '--bootstrap-server', 'kafka-node-1:9092']
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 360s
+
+
+  kafka-node-2:
+    image: apache/kafka:3.7.0
+    container_name: kafka-node-2
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_NODE_ID: 2
+      KAFKA_LISTENERS: INTERNAL://kafka-node-2:9092,EXTERNAL://0.0.0.0:29092,CONTROLLER://kafka-node-2:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://toxiproxy:30002,EXTERNAL://localhost:29092
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-node-1:9093,2@kafka-node-2:9093,3@kafka-node-3:9093
+      KAFKA_KRAFT_MODE: 'true'
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+    ports:
+      - "29092:29092"
+    volumes:
+      - ./.kafka-docker-volume/kafka-node-2:/var/lib/kafka/data
+    networks:
+      - kafka-net
+    healthcheck:
+      test: ['CMD', '/opt/kafka/bin/kafka-broker-api-versions.sh', '--bootstrap-server', 'kafka-node-2:9092']
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 360s
+
+  kafka-node-3:
+    image: apache/kafka:3.7.0
+    container_name: kafka-node-3
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_NODE_ID: 3
+      KAFKA_LISTENERS: INTERNAL://kafka-node-3:9092,EXTERNAL://0.0.0.0:39092,CONTROLLER://kafka-node-3:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://toxiproxy:30003,EXTERNAL://localhost:39092
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-node-1:9093,2@kafka-node-2:9093,3@kafka-node-3:9093
+      KAFKA_KRAFT_MODE: 'true'
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+    ports:
+      - "39092:39092"
+    volumes:
+      - ./.kafka-docker-volume/kafka-node-3:/var/lib/kafka/data
+    networks:
+      - kafka-net
+    healthcheck:
+      test: [ 'CMD', '/opt/kafka/bin/kafka-broker-api-versions.sh', '--bootstrap-server', 'kafka-node-3:9092' ]
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 360s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: kafka-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-node-1:9092,kafka-node-2:9092,kafka-node-3:9092
+      KAFKA_CLUSTERS_0_KSQLDBENABLED: "false"
+    ports:
+      - "28080:8080"
+    networks:
+      - kafka-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/kafka-alerts.yml:/etc/prometheus/kafka-alerts.yml
+    networks:
+      - kafka-net
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - kafka-net
+
+  test-app:
+    container_name: test-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      kafka-node-1:
+        condition: service_healthy
+      kafka-node-2:
+        condition: service_healthy
+      kafka-node-3:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - kafka-net
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: toxiproxy:30001,toxiproxy:30002,toxiproxy:30003
+      CONSUMER_GROUP_ID: test-app
+
+
+networks:
+  kafka-net:
+    driver: bridge
