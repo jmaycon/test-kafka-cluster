@@ -20,7 +20,6 @@
     - [Adding Toxics](#adding-toxics)
         - [Simulate Latency](#simulate-latency)
         - [Simulate Kafka Node Unreachable](#simulate-kafka-node-unreachable-by-the-client)
-    - [Removing Toxics](#removing-toxics)
 - [Kafka CLI](#kafka-cli)
     - [Install Kafka CLI](#install-kafka-cli)
     - [Describe Topics](#describe-topics)
